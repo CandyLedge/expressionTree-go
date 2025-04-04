@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>算！( ˘•ω•˘ ).oOஇ</title>
+    <!-- 链接到谷歌字体，用于加载 Poppins 字体 -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700;800&display=swap" rel="preload" as="style">
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            position: relative;
+            background-image: url('static/1103.jpg');
+            background-size: cover;
+            background-position: top;
+            color: #333;
+        }
+
+        body::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(5px);
+            z-index: -1;
+        }
+
+        input[type="text"] {
+            padding: 15px 30px;
+            width: 450px;
+            font-size: 18px;
+            border: none;
+            border-radius: 50px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            outline: none;
+            text-align: center;
+            position: fixed;
+            top: 40%;
+            transform: translateY(-50%);
+        }
+
+        #resultContainer {
+            position: fixed;
+            top: 45%;
+            font-size: 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            width: 500px;
+            max-width: 500px;
+            overflow: hidden;
+            align-items: flex-end;
+            bottom: 10%;
+        }
+
+        .resultItem {
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 10px 20px;
+            border-radius: 15px;
+            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
+            position: relative;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+            font-size: 16px;
+            opacity: 0;
+            transform: translateX(100%);
+            transition: opacity 0.5s, transform 0.5s;
+        }
+
+        .resultItem.active {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .bubble {
+            position: absolute;
+            top: 3%;
+            left: -100%;
+            background: linear-gradient(135deg, #f0f0f5, #e0e0e8);
+            padding: 20px 30px;
+            border-radius: 40px;
+            box-shadow: 0 15px 35px rgba(90, 90, 100, 0.5);
+            font-family: 'Poppins', sans-serif;
+            font-size: 22px;
+            font-weight: 800;
+            color: #444;
+            text-align: center;
+            white-space: nowrap;
+            width: 350px;
+            animation: fastEnter 1s ease-in-out forwards, slowMove 60s ease-in-out forwards;
+            opacity: 1;
+        }
+
+        @keyframes fastEnter {
+            0% {
+                left: -100%;
+            }
+            100% {
+                left: 100%;
+            }
+        }
+
+        @keyframes slowMove {
+            0% {
+                left: 100%;
+            }
+            98% {
+                left: -30%;
+            }
+            100% {
+                left: -30%;
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="bubble">
+    输入 “1 + 1” 或 “1 add 1” 运算
+</div>
+<input type="text" id="inputBox" placeholder="(´・ω・)つEnter an expression">
+<div id="resultContainer"></div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const inputBox = document.getElementById("inputBox");
+        const resultContainer = document.getElementById("resultContainer");
+        const bubble = document.querySelector('.bubble');
+
+        bubble.style.display = 'block';
+        inputBox.focus();
+    });
+
+    inputBox.addEventListener("keydown", function (event) {
+        if (event.key === "Enter") {
+            const inputValue = inputBox.value;
+            // 替换中文括号为西文括号
+            const convertedInput = inputValue.replace(/[（）]/g, function (match) {
+                return match === '（'? '(' : ')';
+            });
+            sendRequest(convertedInput);
+        }
+    });
+
+    function sendRequest(input) {
+        fetch("/api/process", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ input: input })
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.errorFlag === 1) {
+                    inputBox.value = "";
+                    inputBox.placeholder = `(´・ω・)つfix ！ retry！retry!`;
+                    return;
+                }
+                const newResult = document.createElement('div');
+                newResult.classList.add('resultItem');
+                newResult.innerHTML = `<span>${input} = <strong>${data.result}</strong></span>`;
+                resultContainer.appendChild(newResult);
+
+                // 等待上一结果动画完成后开始新结果动画
+                if (resultContainer.childNodes.length > 1) {
+                    const previousResult = resultContainer.childNodes[0];
+                    previousResult.classList.remove('active');
+                    previousResult.addEventListener('transitionend', function () {
+                        resultContainer.removeChild(previousResult);
+                    });
+                }
+
+                setTimeout(() => {
+                    newResult.classList.add('active');
+                }, 50); // 等待DOM更新
+                inputBox.value = "";
+                inputBox.placeholder = "(´・ω・)つEnter an expression";
+            })
+            .catch(error => {
+                console.error("请求出错:", error);
+            });
+    }
+</script>
+</body>
+</html>
